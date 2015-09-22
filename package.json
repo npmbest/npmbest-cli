@@ -1,0 +1,35 @@
+{
+  "name": "npmbest",
+  "version": "0.0.1",
+  "description": "The CLI tool for https://npm.best",
+  "main": "index.js",
+  "bin": {
+    "npmbest": "./bin/npmbest"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/npmbest/npmbest-cli.git"
+  },
+  "keywords": [
+    "npm",
+    "package",
+    "tool",
+    "cli",
+    "best"
+  ],
+  "author": "Zongmin Lei <leizongmin@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/npmbest/npmbest-cli/issues"
+  },
+  "homepage": "https://github.com/npmbest/npmbest-cli#readme",
+  "dependencies": {
+    "cli-color": "^1.0.0",
+    "commander": "^2.8.1",
+    "debug": "^2.2.0",
+    "request": "^2.63.0"
+  }
+}

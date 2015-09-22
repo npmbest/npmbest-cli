@@ -1,0 +1,145 @@
+#!/usr/bin/env node
+
+var program = require('commander');
+var debug = require('debug')('npmbest');
+var clc = require('cli-color');
+var request = require('request');
+var packageInfo = require('../package');
+
+
+
+var URL_NPM_BEST = 'https://npm.best';
+var URL_SEARCH = URL_NPM_BEST + '/api/search.json';
+var URL_SUGGEST = URL_NPM_BEST + '/api/search/input/suggestions';
+var hasRunCommand = false;
+var DEFAULT_LIMIT = 5;
+
+
+program
+  .version(packageInfo.version)
+  .usage('<command>');
+
+program
+  .command('search <keyword>')
+  .option('-l, --limit [limit]', 'default to ' + DEFAULT_LIMIT)
+  .option('-s, --skip [skip]', 'default to 0')
+  .description('search packages for <keyword>')
+  .action(searchCommand);
+
+program
+  .command('suggest <keyword>')
+  .option('-l, --limit [limit]', 'default to ' + DEFAULT_LIMIT)
+  .option('-t, --type [type]', 'default to "start"')
+  .description('search suggestion for <keyword>')
+  .action(suggestCommand);
+
+program.parse(process.argv);
+
+
+function printError (err) {
+  if (err.stack) console.log(err.stack);
+  console.log(clc.red.bgBlackBright.bold(err.toString()));
+}
+
+function die (err) {
+  if (err) {
+    printError(err);
+    process.exit(1);
+  } else {
+    process.exit(0);
+  }
+}
+
+function parseJSON (str) {
+  try {
+    str = str.toString();
+    var data = JSON.parse(str);
+  } catch (err) {
+    console.log('JSON: ' + str);
+    die(err);
+  }
+  return data;
+}
+
+function requestAPI (options, callback) {
+  var timestamp = Date.now();
+  request(options, function (err, res, body) {
+    if (err) return callback(err);
+    var data = parseJSON(body);
+    if (data.status !== 'OK') return callback(new Error('#' + data.error_code + ' ' + data.error_message));
+    callback(null, data.result, Date.now() - timestamp);
+  });
+}
+
+function highlightKeyworld (w, str) {
+  w.split(/\s+/).forEach(function (w) {
+    w = w.trim();
+    if (w) {
+      str = str.replace(new RegExp(w, 'ig'), clc.redBright.bgBlackBright(w));
+    }
+  });
+  return str;
+}
+
+function searchCommand (keyword, options) {
+  hasRunCommand = true;
+  console.log('search for %s...', clc.green.bgBlackBright.bold(keyword));
+  requestAPI({
+    method: 'GET',
+    url: URL_SEARCH,
+    qs: {
+      query: keyword,
+      skip: options.skip || 0,
+      limit: options.limit || DEFAULT_LIMIT
+    }
+  }, function (err, ret, spent) {
+    if (err) die(err);
+    ret.list.forEach(function (item) {
+      console.log('');
+      console.log('%s - by %s (star:%s fork:%s watch:%s)',
+        clc.yellowBright.bold.bgBlackBright(' ' + item.name + ' '),
+        clc.bold(item.author_name),
+        clc.bold(item.star_count),
+        clc.bold(item.fork_count),
+        clc.bold(item.watch_count));
+      console.log('  latest version: %s  last updated: %s  %s',
+        clc.bold(item.latest_version),
+        clc.bold(item.modified),
+        item.is_github ? clc.whiteBright.bgGreen(' GitHub ') : '');
+      console.log('  %s', highlightKeyworld(ret.query, item.description));
+      console.log('  link: %s', item.repository);
+    });
+    console.log('');
+    console.log('Find %s results for "%s", shows %s - %s (spent %sms)',
+      ret.count, ret.query, ret.skip, ret.skip + ret.limit, spent);
+  });
+}
+
+function suggestCommand (keyword, options) {
+  hasRunCommand = true;
+  console.log('suggest for %s...', clc.green.bgBlackBright.bold(keyword));
+  requestAPI({
+    method: 'GET',
+    url: URL_SUGGEST,
+    qs: {
+      query: keyword,
+      type: options.type || 'start',
+      limit: options.limit || DEFAULT_LIMIT
+    }
+  }, function (err, ret, spent) {
+    if (err) die(err);
+    ret.list.forEach(function (item) {
+      console.log('');
+      console.log('%s - %s results',
+        clc.yellowBright.bold.bgBlackBright(' ' + item.w + ' '),
+        clc.bold(item.c));
+    });
+    console.log('');
+    console.log('Find %s results for "%s" (spent %sms)',
+      ret.list.count, ret.query, spent);
+  });
+}
+
+if (!hasRunCommand) {
+  searchCommand(program.args[0], program);
+}
