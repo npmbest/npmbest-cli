@@ -28,7 +28,7 @@
   "homepage": "https://github.com/npmbest/npmbest-cli#readme",
   "dependencies": {
     "cli-color": "^1.0.0",
-    "commander": "^2.8.1",
+    "commander": "^3.0.1",
     "debug": "^2.2.0",
     "request": "^2.63.0"
   }
